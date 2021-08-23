@@ -111,8 +111,8 @@ typedef struct cool_machine {
 } cool_machine;
 
 AWORD cool_pop_stack(cool_machine* machine) {
-	AWORD value = read_memory(machine->SP);
-	write_memory(machine->SP++, 0);
+	AWORD value = read_memory(machine->SP++);
+	//write_memory(machine->SP++, 0);
 	return value;
 }
 
@@ -137,6 +137,7 @@ void cool_add(cool_machine* machine, AWORD* _) {
 
 	int first = cool_pop_stack(machine);
 	int second = cool_pop_stack(machine);
+	printf("%i %i\n", first, second);
 	cool_push_stack(machine, second + first);
 }
 
@@ -153,6 +154,7 @@ void cool_mult(cool_machine* machine, AWORD* _) {
 
 	int first = cool_pop_stack(machine);
 	int second = cool_pop_stack(machine);
+	printf("%i %i\n", first, second);
 	cool_push_stack(machine, second * first);
 }
 
@@ -162,6 +164,24 @@ void cool_div(cool_machine* machine, AWORD* _) {
 	int first = cool_pop_stack(machine);
 	int second = cool_pop_stack(machine);
 	cool_push_stack(machine, second / first);
+}
+
+void cool_call(cool_machine* machine, AWORD* operands) {
+	AWORD function_address = operands[0];
+	cool_push_stack(machine, machine->FP);
+	cool_push_stack(machine, machine->PC);
+	machine->FP = machine->SP;
+	machine->PC = function_address;
+}
+
+void cool_return(cool_machine* machine, AWORD* _ ) {
+	UNUSED(_);
+
+	AWORD return_value = cool_pop_stack(machine);
+	machine->SP = machine->FP;
+	machine->PC = cool_pop_stack(machine);
+	machine->FP = cool_pop_stack(machine);
+	cool_push_stack(machine, return_value);
 }
 
 void cool_jmp(cool_machine* machine, AWORD* operands) {
@@ -232,8 +252,8 @@ const instruction_handler instruction_handlers[] = {
 	{cool_sub, 0},
 	{cool_mult, 0},
 	{cool_div, 0},
-	{NULL, 0}, //TODO functions
-	{NULL, 0},
+	{cool_call, 1},
+	{cool_return, 0},
 	{cool_jmp, 1},
 	{cool_jeq, 1},
 	{cool_printi, 0},
