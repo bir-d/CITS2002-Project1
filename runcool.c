@@ -168,8 +168,8 @@ void cool_div(cool_machine* machine, AWORD* _) {
 
 void cool_call(cool_machine* machine, AWORD* operands) {
 	AWORD function_address = operands[0];
-	cool_push_stack(machine, machine->FP);
 	cool_push_stack(machine, machine->PC);
+	cool_push_stack(machine, machine->FP);
 	machine->FP = machine->SP;
 	machine->PC = function_address;
 }
@@ -179,8 +179,8 @@ void cool_return(cool_machine* machine, AWORD* _ ) {
 
 	AWORD return_value = cool_pop_stack(machine);
 	machine->SP = machine->FP;
-	machine->PC = cool_pop_stack(machine);
 	machine->FP = cool_pop_stack(machine);
+	machine->PC = cool_pop_stack(machine);
 	cool_push_stack(machine, return_value);
 }
 
