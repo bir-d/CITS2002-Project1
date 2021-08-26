@@ -307,7 +307,15 @@ void read_coolexe_file(char filename[]) {
 	memset(main_memory, 0, sizeof main_memory);   //  clear all memory
 	//  READ CONTENTS OF coolexe FILE
 	FILE* program_file = fopen(filename, "rb");
-	fread(main_memory, sizeof main_memory, 1, program_file);
+	if (program_file == NULL) {
+		fprintf(stderr, "Invalid file! Exiting...");
+		exit(EXIT_FAILURE);
+	}
+
+	if (fread(main_memory, sizeof main_memory, 1, program_file) == 0) {
+		fprintf(stderr, "Empty file! Exiting...");
+		exit(EXIT_FAILURE);
+	}
 }
 
 //  -------------------------------------------------------------------
