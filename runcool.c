@@ -137,7 +137,6 @@ void cool_add(cool_machine* machine, AWORD* _) {
 
 	int first = cool_pop_stack(machine);
 	int second = cool_pop_stack(machine);
-	printf("%i %i\n", first, second);
 	cool_push_stack(machine, second + first);
 }
 
@@ -154,7 +153,6 @@ void cool_mult(cool_machine* machine, AWORD* _) {
 
 	int first = cool_pop_stack(machine);
 	int second = cool_pop_stack(machine);
-	printf("%i %i\n", first, second);
 	cool_push_stack(machine, second * first);
 }
 
@@ -168,20 +166,23 @@ void cool_div(cool_machine* machine, AWORD* _) {
 
 void cool_call(cool_machine* machine, AWORD* operands) {
 	AWORD function_address = operands[0];
+
 	cool_push_stack(machine, machine->PC);
 	cool_push_stack(machine, machine->FP);
 	machine->FP = machine->SP;
 	machine->PC = function_address;
 }
 
-void cool_return(cool_machine* machine, AWORD* _ ) {
-	UNUSED(_);
-
+void cool_return(cool_machine* machine, AWORD* operands) {
+	AWORD return_offset = operands[0];
 	AWORD return_value = cool_pop_stack(machine);
-	machine->SP = machine->FP;
-	machine->FP = cool_pop_stack(machine);
-	machine->PC = cool_pop_stack(machine);
-	cool_push_stack(machine, return_value);
+
+	int current_frame_pointer = machine->FP;
+	machine->FP = read_memory(current_frame_pointer);
+	machine->PC = read_memory(current_frame_pointer + 1);
+	machine->SP = current_frame_pointer + return_offset;
+
+	write_memory(machine->SP, return_value);
 }
 
 void cool_jmp(cool_machine* machine, AWORD* operands) {
@@ -191,6 +192,7 @@ void cool_jmp(cool_machine* machine, AWORD* operands) {
 
 void cool_jeq(cool_machine* machine, AWORD* operands) {
 	AWORD address = operands[0];
+
 	AWORD condition = cool_pop_stack(machine);
 	if (condition == 0) {
 		machine->PC = address;
@@ -214,28 +216,33 @@ void cool_prints(cool_machine* machine, AWORD* operands) {
 
 void cool_pushc(cool_machine* machine, AWORD* operands) {
 	AWORD value = operands[0];
+
 	cool_push_stack(machine, value);
 }
 
 void cool_pusha(cool_machine* machine, AWORD* operands) {
 	AWORD address = operands[0];
+
 	AWORD value = read_memory(address);
 	cool_push_stack(machine, value);
 }
 
 void cool_pushr(cool_machine* machine, AWORD* operands) {
 	AWORD address = machine->FP + operands[0];
+
 	AWORD value = read_memory(address);
 	cool_push_stack(machine, value);
 }
 
 void cool_popa(cool_machine* machine, AWORD* operands) {
 	AWORD address = operands[0];
+
 	AWORD value = cool_pop_stack(machine);
 	write_memory(address, value);
 }
 void cool_popr(cool_machine* machine, AWORD* operands) {
 	AWORD address = machine->FP + operands[0];
+
 	AWORD value = cool_pop_stack(machine);
 	write_memory(address, value);
 }
@@ -253,7 +260,7 @@ const instruction_handler instruction_handlers[] = {
 	{cool_mult, 0},
 	{cool_div, 0},
 	{cool_call, 1},
-	{cool_return, 0},
+	{cool_return, 1},
 	{cool_jmp, 1},
 	{cool_jeq, 1},
 	{cool_printi, 0},
@@ -284,7 +291,7 @@ int execute_stackmachine(void) {
 		//  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
 		IWORD instruction   = read_memory(machine.PC++);
 
-		printf("%s\n", INSTRUCTION_name[instruction]);
+		printf("%d: %s\n", machine.PC - 1, INSTRUCTION_name[instruction]);
 		instruction_handler handler = instruction_handlers[instruction];
 		for (IWORD i = 0; i < handler.operand_count; i++) {
 			operands[i] = read_memory(machine.PC++);
@@ -294,6 +301,7 @@ int execute_stackmachine(void) {
 	}
 
 	//  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
+	printf("%d", machine.SP);
 	return read_memory(machine.SP);
 }
 
