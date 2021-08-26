@@ -200,7 +200,7 @@ void cool_prints(cool_machine* machine, AWORD* operands) {
 
 	AWORD cstring_address = operands[0];
 	//How am I supposed to do this with read_memory?
-	printf("%s\n", &main_memory[cstring_address]);
+	printf("%s\n", (char *)&main_memory[cstring_address]);
 }
 
 void cool_pushc(cool_machine* machine, AWORD* operands) {
@@ -297,7 +297,6 @@ int execute_stackmachine(void) {
 	}
 
 	//  THE RESULT OF EXECUTING THE INSTRUCTIONS IS FOUND ON THE TOP-OF-STACK
-	printf("%d", machine.SP);
 	return read_memory(machine.SP);
 }
 
