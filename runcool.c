@@ -107,7 +107,6 @@ void write_memory(AWORD address, AWORD value) {
 
 typedef struct cool_machine {
 	int PC, SP, FP;
-	bool halted;
 } cool_machine;
 
 AWORD cool_pop_stack(cool_machine* machine) {
@@ -121,16 +120,6 @@ void cool_push_stack(cool_machine* machine, AWORD value) {
 }
 
 #define UNUSED(x) (void)(x)
-
-void cool_halt(cool_machine* machine, AWORD* _) {
-	UNUSED(_);
-	machine->halted = true;
-}
-
-void cool_nop(cool_machine* machine, AWORD* _) {
-	UNUSED(machine);
-	UNUSED(_);
-}
 
 void cool_add(cool_machine* machine, AWORD* _) {
 	UNUSED(_);
@@ -253,8 +242,8 @@ typedef struct instruction_handler {
 } instruction_handler;
 
 const instruction_handler instruction_handlers[] = {
-	{cool_halt, 0},
-	{cool_nop, 0},
+	{NULL, 0}, //halt & nop; these should never be reached
+	{NULL, 0},
 	{cool_add, 0},
 	{cool_sub, 0},
 	{cool_mult, 0},
@@ -280,18 +269,25 @@ int execute_stackmachine(void) {
 		.PC = 0, // 1st instruction is at address=0
 		.SP = N_MAIN_MEMORY_WORDS, // initialised to top-of-stack
 		.FP = 0, // frame pointer
-		.halted = false,
 	};
 
 	// effectively AWORD operand, but leave like this for extensibility
 	AWORD operands[MAX_OPERAND_COUNT];
 
-	while(!machine.halted) {
+	while (true) {
 
 		//  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
 		IWORD instruction   = read_memory(machine.PC++);
+		if (instruction == I_HALT) {
+			break;
+		} else if (instruction == I_NOP) {
+			continue;
+		} else if (instruction > I_POPR) {
+			fprintf(stderr, "Invalid instruction! Halting...");
+			break;
+		}
 
-		printf("%d: %s\n", machine.PC - 1, INSTRUCTION_name[instruction]);
+		// printf("%d: %s\n", machine.PC - 1, INSTRUCTION_name[instruction]);
 		instruction_handler handler = instruction_handlers[instruction];
 		for (IWORD i = 0; i < handler.operand_count; i++) {
 			operands[i] = read_memory(machine.PC++);
@@ -319,7 +315,7 @@ void read_coolexe_file(char filename[]) {
 
 int main(int argc, char *argv[]) {
 	//  CHECK THE NUMBER OF ARGUMENTS
-	if(argc != 2) {
+	if (argc != 2) {
 		fprintf(stderr, "Usage: %s program.coolexe\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
