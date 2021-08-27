@@ -70,6 +70,19 @@ const char *INSTRUCTION_name[] = {
 
 //  ----  IT IS SAFE TO MODIFY ANYTHING BELOW THIS LINE  --------------
 
+//  THE STACK-BASED MACHINE HAS 2^5 (= 32) WORDS OF MAIN MEMORY
+#define N_CACHE_MEMORY_WORDS (1<<5)
+
+typedef struct caches {
+	bool valid : 1;
+	bool dirty : 1;
+	unsigned int tag : 11; // 16 - 5, only 11 bits is required
+	AWORD data;
+} cache_block;
+
+//  THE ARRAY OF 32 WORDS OF CACHE MEMORY
+cache_block cache_memory[N_CACHE_MEMORY_WORDS] = {0};
+
 #define MAX_OPERAND_COUNT 1
 
 //  THE STATISTICS TO BE ACCUMULATED AND REPORTED
@@ -94,13 +107,53 @@ void report_statistics(void) {
 //  SUPPORT CACHE MEMORY
 
 AWORD read_memory(int address) {
+	int cache_index = address % 32;
+	cache_block* block = &cache_memory[cache_index];
+	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
+
+	if (address == cache_physical_address && block->valid) {
+		n_cache_memory_hits++;
+		return block->data;
+	}
+
+	n_cache_memory_misses++;
+
+	if (block->dirty && block->valid) {
+		n_main_memory_writes++;
+		main_memory[cache_physical_address] = block->data;
+	}
+
 	n_main_memory_reads++;
-	return main_memory[address];
+	block->tag = address >> 5;
+	block->data = main_memory[address];
+	block->dirty = false;
+	block->valid = true;
+
+	return block->data;
 }
 
 void write_memory(AWORD address, AWORD value) {
-	n_main_memory_writes++;
-	main_memory[address] = value;
+	int cache_index = address % 32;
+	cache_block* block = &cache_memory[cache_index];
+	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
+
+	if (address == cache_physical_address && block->valid) {
+		n_cache_memory_hits++;
+		block->data = value;
+		return;
+	}
+
+	n_cache_memory_misses++;
+
+	if (block->dirty && block->valid) {
+		n_main_memory_writes++;
+		main_memory[cache_physical_address] = block->data;
+	}
+
+	block->tag = address >> 5;
+	block->data = value;
+	block->dirty = true;
+	block->valid = true;
 }
 
 //  -------------------------------------------------------------------
@@ -111,7 +164,6 @@ typedef struct cool_machine {
 
 AWORD cool_pop_stack(cool_machine* machine) {
 	AWORD value = read_memory(machine->SP++);
-	//write_memory(machine->SP++, 0);
 	return value;
 }
 
@@ -192,7 +244,7 @@ void cool_printi(cool_machine* machine, AWORD* _) {
 	UNUSED(_);
 
 	IWORD value = cool_pop_stack(machine);
-	printf("%hi\n", value);
+	printf("%hi", value);
 }
 
 void cool_prints(cool_machine* machine, AWORD* operands) {
@@ -200,7 +252,7 @@ void cool_prints(cool_machine* machine, AWORD* operands) {
 
 	AWORD cstring_address = operands[0];
 	//How am I supposed to do this with read_memory?
-	printf("%s\n", (char *)&main_memory[cstring_address]);
+	printf("%s", (char *)&main_memory[cstring_address]);
 }
 
 void cool_pushc(cool_machine* machine, AWORD* operands) {
@@ -277,7 +329,7 @@ int execute_stackmachine(void) {
 	while (true) {
 
 		//  FETCH THE NEXT INSTRUCTION TO BE EXECUTED
-		IWORD instruction   = read_memory(machine.PC++);
+		IWORD instruction = read_memory(machine.PC++);
 		if (instruction == I_HALT) {
 			break;
 		} else if (instruction == I_NOP) {
