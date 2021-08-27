@@ -140,6 +140,7 @@ void write_memory(AWORD address, AWORD value) {
 	if (address == cache_physical_address && block->valid) {
 		n_cache_memory_hits++;
 		block->data = value;
+		block->dirty = true;
 		return;
 	}
 
@@ -251,8 +252,15 @@ void cool_prints(cool_machine* machine, AWORD* operands) {
 	UNUSED(machine);
 
 	AWORD cstring_address = operands[0];
-	//How am I supposed to do this with read_memory?
-	printf("%s", (char *)&main_memory[cstring_address]);
+	
+	char cstring_part[3]; // Extra byte to terminate the string, as we are using %s not %c
+	do {
+		AWORD raw_value = read_memory(cstring_address++);
+
+		cstring_part[0] = raw_value & 0xff;
+		cstring_part[1] = (raw_value >> 8) & 0xff;
+		printf("%s", cstring_part);
+	} while (cstring_part[0] != 0 ||cstring_part[1] != 0);
 }
 
 void cool_pushc(cool_machine* machine, AWORD* operands) {
