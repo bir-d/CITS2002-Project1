@@ -312,10 +312,7 @@ void read_coolexe_file(char filename[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	if (fread(main_memory, sizeof main_memory, 1, program_file) == 0) {
-		fprintf(stderr, "Empty file! Exiting...");
-		exit(EXIT_FAILURE);
-	}
+	fread(main_memory, sizeof main_memory, 1, program_file);
 }
 
 //  -------------------------------------------------------------------
