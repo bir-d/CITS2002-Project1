@@ -192,15 +192,21 @@ void cool_printi(cool_machine* machine, AWORD* _) {
 	UNUSED(_);
 
 	IWORD value = cool_pop_stack(machine);
-	printf("%hi\n", value);
+	printf("%hi", value);
 }
 
 void cool_prints(cool_machine* machine, AWORD* operands) {
 	UNUSED(machine);
 
 	AWORD cstring_address = operands[0];
-	//How am I supposed to do this with read_memory?
-	printf("%s\n", (char *)&main_memory[cstring_address]);
+	char cstring_part[3]; // Extra byte to terminate the string, as we are using %s not %c
+	do {
+		AWORD raw_value = read_memory(cstring_address++);
+		cstring_part[0] = raw_value & 0xff;
+		cstring_part[1] = (raw_value >> 8) & 0xff;
+		printf("%s", cstring_part);
+
+	} while (cstring_part[0] != 0 ||cstring_part[1] != 0);
 }
 
 void cool_pushc(cool_machine* machine, AWORD* operands) {
