@@ -107,7 +107,7 @@ void report_statistics(void) {
 //  SUPPORT CACHE MEMORY
 
 AWORD read_memory(int address) {
-	/*int cache_index = address % 32;
+	int cache_index = address % 32;
 	cache_block* block = &cache_memory[cache_index];
 	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
 
@@ -130,13 +130,9 @@ AWORD read_memory(int address) {
 	block->valid = true;
 
 	return block->data;
-	*/
-	n_main_memory_reads++;
-	return main_memory[address];
 }
 
 void write_memory(AWORD address, AWORD value) {
-	/*
 	int cache_index = address % 32;
 	cache_block* block = &cache_memory[cache_index];
 	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
@@ -159,9 +155,6 @@ void write_memory(AWORD address, AWORD value) {
 	block->data = value;
 	block->dirty = true;
 	block->valid = true;
-	*/
-	n_main_memory_writes++;
-	main_memory[address] = value;
 }
 
 //  -------------------------------------------------------------------
