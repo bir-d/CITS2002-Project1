@@ -107,7 +107,7 @@ void report_statistics(void) {
 //  SUPPORT CACHE MEMORY
 
 AWORD read_memory(int address) {
-	int cache_index = address % 32;
+	/*int cache_index = address % 32;
 	cache_block* block = &cache_memory[cache_index];
 	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
 
@@ -130,9 +130,13 @@ AWORD read_memory(int address) {
 	block->valid = true;
 
 	return block->data;
+	*/
+	n_main_memory_reads++;
+	return main_memory[address];
 }
 
 void write_memory(AWORD address, AWORD value) {
+	/*
 	int cache_index = address % 32;
 	cache_block* block = &cache_memory[cache_index];
 	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
@@ -155,6 +159,9 @@ void write_memory(AWORD address, AWORD value) {
 	block->data = value;
 	block->dirty = true;
 	block->valid = true;
+	*/
+	n_main_memory_writes++;
+	main_memory[address] = value;
 }
 
 //  -------------------------------------------------------------------
@@ -236,8 +243,10 @@ void cool_jeq(cool_machine* machine, AWORD* operands) {
 	AWORD address = operands[0];
 
 	AWORD condition = cool_pop_stack(machine);
-	if (condition == 0) {
-		machine->PC = address;
+	if (!condition) {
+		machine->PC = read_memory(machine->PC);
+	} else {
+		machine->PC++;
 	}
 }
 
@@ -245,7 +254,7 @@ void cool_printi(cool_machine* machine, AWORD* _) {
 	UNUSED(_);
 
 	IWORD value = cool_pop_stack(machine);
-	printf("%hi", value);
+	printf("%hd", value);
 }
 
 void cool_prints(cool_machine* machine, AWORD* operands) {
@@ -254,13 +263,14 @@ void cool_prints(cool_machine* machine, AWORD* operands) {
 	AWORD cstring_address = operands[0];
 	
 	char cstring_part[3]; // Extra byte to terminate the string, as we are using %s not %c
+	cstring_part[2] = '\0';
 	do {
 		AWORD raw_value = read_memory(cstring_address++);
 
 		cstring_part[0] = raw_value & 0xff;
 		cstring_part[1] = (raw_value >> 8) & 0xff;
 		printf("%s", cstring_part);
-	} while (cstring_part[0] != 0 ||cstring_part[1] != 0);
+	} while (cstring_part[0] != 0 && cstring_part[1] != 0);
 }
 
 void cool_pushc(cool_machine* machine, AWORD* operands) {
@@ -311,7 +321,7 @@ const instruction_handler instruction_handlers[] = {
 	{cool_call, 1},
 	{cool_return, 1},
 	{cool_jmp, 1},
-	{cool_jeq, 1},
+	{cool_jeq, 0}, // specifications say 1, but we are implementing the jeq optimisation
 	{cool_printi, 0},
 	{cool_prints, 1},
 	{cool_pushc, 1},
