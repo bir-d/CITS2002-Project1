@@ -138,13 +138,11 @@ void write_memory(AWORD address, AWORD value) {
 	AWORD cache_physical_address = ((block->tag << 5) | cache_index);
 
 	if (address == cache_physical_address && block->valid) {
-		n_cache_memory_hits++;
 		block->data = value;
 		block->dirty = true;
+		block->valid = true;
 		return;
 	}
-
-	n_cache_memory_misses++;
 
 	if (block->dirty && block->valid) {
 		n_main_memory_writes++;
@@ -232,8 +230,8 @@ void cool_jmp(cool_machine* machine, AWORD* operands) {
 	machine->PC = address;
 }
 
-void cool_jeq(cool_machine* machine, AWORD* operands) {
-	AWORD address = operands[0];
+void cool_jeq(cool_machine* machine, AWORD* _) {
+	UNUSED(_);
 
 	AWORD condition = cool_pop_stack(machine);
 	if (!condition) {
@@ -333,6 +331,7 @@ int execute_stackmachine(void) {
 		.SP = N_MAIN_MEMORY_WORDS, // initialised to top-of-stack
 		.FP = 0, // frame pointer
 	};
+	memset(cache_memory, 0, sizeof cache_memory);
 
 	// effectively AWORD operand, but leave like this for extensibility
 	AWORD operands[MAX_OPERAND_COUNT];
